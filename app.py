@@ -1,31 +1,52 @@
 import streamlit as st
 import yfinance as yf
-import seaborn as sns
-import matplotlib.pyplot as plt
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+import numpy as np
 
 # Streamlit UI
-st.title("📊 Yahoo Finance Boxplot Viewer")
+st.title("📈 Yahoo Finance - Linear Regression on Stock Prices")
 
-ticker = st.text_input("Enter Stock Ticker Symbol (e.g., AAPL, TSLA):", "AAPL")
-period = st.selectbox("Select Time Period:", ["1mo", "3mo", "6mo", "1y", "2y", "5y"])
+ticker = st.text_input("Enter Stock Ticker (e.g., AAPL, TSLA):", "AAPL")
+period = st.selectbox("Select Period:", ["1mo", "3mo", "6mo", "1y", "2y"])
 interval = st.selectbox("Select Interval:", ["1d", "1wk", "1mo"])
 
-if st.button("Generate Boxplot"):
-    try:
-        df = yf.download(ticker, period=period, interval=interval)
-        if df.empty:
-            st.warning("No data returned. Please check the ticker or try a different time range.")
-        else:
-            df.dropna(inplace=True)
+if st.button("Run Regression"):
+    df = yf.download(ticker, period=period, interval=interval)
+    if df.empty:
+        st.warning("No data returned. Try another ticker or range.")
+    else:
+        df.dropna(inplace=True)
+        df.reset_index(inplace=True)
 
-            st.write(f"Showing data for **{ticker}** - Close Prices")
+        # Convert date to numeric (ordinal format)
+        df['Date_Ordinal'] = df['Date'].map(pd.Timestamp.toordinal)
 
-            # Plotting
-            fig, ax = plt.subplots(figsize=(8, 6))
-            sns.boxplot(y=df['Close'], ax=ax)
-            ax.set_title(f'{ticker} Close Price Boxplot ({period})')
-            ax.set_ylabel('Price ($)')
-            st.pyplot(fig)
-    except Exception as e:
-        st.error(f"Error: {e}")
+        # Prepare X and y
+        X = df[['Date_Ordinal']]
+        y = df['Close']
+
+        # Fit model
+        model = LinearRegression()
+        model.fit(X, y)
+
+        # Predict
+        y_pred = model.predict(X)
+
+        # Plot
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(df['Date'], y, label="Actual", color='blue')
+        ax.plot(df['Date'], y_pred, label="Linear Regression", color='red')
+        ax.set_title(f"{ticker} Close Price & Regression Line")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Close Price ($)")
+        ax.legend()
+        ax.grid(True)
+
+        st.pyplot(fig)
+
+        # Display coefficients
+        st.markdown(f"**Regression Equation:**")
+        st.code(f"Price = {model.coef_[0]:.4f} * Date + {model.intercept_:.2f}")
