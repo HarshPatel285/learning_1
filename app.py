@@ -49,4 +49,6 @@ if st.button("Run Regression"):
 
         # Display coefficients
         st.markdown(f"**Regression Equation:**")
-        st.code(f"Price = {model.coef_[0]:.4f} * Date + {model.intercept_:.2f}")
+        slope = float(model.coef_[0])
+        intercept = float(model.intercept_)
+        st.code(f"Price = {slope:.4f} * Date + {intercept:.2f}")
